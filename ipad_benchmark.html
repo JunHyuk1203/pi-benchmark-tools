@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iPad Pi Benchmark</title>
+    <!-- 고급스러운 폰트 적용 (Outfit) -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #0b0f19, #1a2235);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        /* 글래스모피즘(Glassmorphism) 효과 적용된 컨테이너 */
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            width: 85%;
+            max-width: 600px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 5px;
+            background: linear-gradient(90deg, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            color: #94a3b8; 
+            margin: 0;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .stat-box {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: transform 0.2s;
+        }
+        .stat-box:hover {
+            transform: translateY(-2px);
+            background: rgba(0, 0, 0, 0.3);
+        }
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-top: 10px;
+            color: #e2e8f0;
+            font-variant-numeric: tabular-nums;
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+        .pi-display {
+            margin-top: 30px;
+            font-size: 1.8rem;
+            font-weight: 300;
+            color: #fbbf24;
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 16px;
+            word-break: break-all;
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+        button {
+            margin-top: 35px;
+            padding: 18px 45px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: 'Outfit', sans-serif;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+            width: 100%;
+        }
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 25px rgba(37, 99, 235, 0.5);
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+        }
+        button:active {
+            transform: translateY(1px);
+        }
+        button:disabled {
+            background: #475569;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .progress-container {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 5px;
+            margin-top: 35px;
+            overflow: hidden;
+            display: none;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            border-radius: 5px;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+        .error-rate {
+            font-size: 0.9rem;
+            color: #ef4444;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>iPad Pi Benchmark</h1>
+        <p class="subtitle">Multi-core WebWorker Engine Test</p>
+        
+        <div class="stat-grid">
+            <div class="stat-box">
+                <div class="stat-label">Cores Activated</div>
+                <div class="stat-value" id="coreCount">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Elapsed Time</div>
+                <div class="stat-value" id="timeElapsed">0.0s</div>
+            </div>
+            <div class="stat-box" style="grid-column: span 2;">
+                <div class="stat-label">Total Operations</div>
+                <div class="stat-value" id="totalIters" style="color: #38bdf8;">0</div>
+            </div>
+        </div>
+
+        <div class="pi-display">
+            <div>Pi: <span id="piValue" style="font-family: monospace; font-weight: bold;">3.14...</span></div>
+            <div class="error-rate" id="piError"></div>
+        </div>
+
+        <div class="progress-container" id="progContainer">
+            <div class="progress-bar" id="progBar"></div>
+        </div>
+
+        <button id="startBtn">START 60s BENCHMARK</button>
+    </div>
+
+    <script>
+        const DURATION = 60; // 60초 벤치마크
+        const startBtn = document.getElementById('startBtn');
+        const coreCountEl = document.getElementById('coreCount');
+        const timeElapsedEl = document.getElementById('timeElapsed');
+        const totalItersEl = document.getElementById('totalIters');
+        const piValueEl = document.getElementById('piValue');
+        const piErrorEl = document.getElementById('piError');
+        const progContainer = document.getElementById('progContainer');
+        const progBar = document.getElementById('progBar');
+
+        // iPad/브라우저가 허용하는 최대 하드웨어 논리 코어 수 감지
+        const logicalCores = navigator.hardwareConcurrency || 4;
+        coreCountEl.textContent = logicalCores;
+
+        // Web Worker 스크립트 (별도 파일 없이 인라인으로 Blob 생성하여 코어별로 병렬 구동)
+        const workerScript = `
+            self.onmessage = function(e) {
+                const { processId, totalProcesses, duration } = e.data;
+                const startTime = Date.now();
+                const endTime = startTime + duration * 1000;
+                
+                let n = processId;
+                let localSum = 0.0;
+                let iters = 0;
+                let lastReportTime = 0;
+                
+                while (true) {
+                    const now = Date.now();
+                    if (now >= endTime) break;
+                    
+                    // 파이썬 스크립트와 동일한 최적화 로직 적용 (유기적인 숫자 증가)
+                    let batchSize = 8192;
+                    if (endTime - now < 50) batchSize = 17;
+                    
+                    for (let i = 0; i < batchSize; i++) {
+                        const denom = 2 * n + 1;
+                        if (n % 2 === 0) localSum += 1.0 / denom;
+                        else localSum -= 1.0 / denom;
+                        n += totalProcesses;
+                    }
+                    iters += batchSize;
+                    
+                    // 약 0.1초마다 메인 UI 스레드로 보고
+                    if (now - lastReportTime > 100) {
+                        self.postMessage({ type: 'update', iters: iters, sum: localSum });
+                        lastReportTime = now;
+                    }
+                }
+                self.postMessage({ type: 'done', iters: iters, sum: localSum });
+            };
+        `;
+        const blob = new Blob([workerScript], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(blob);
+
+        startBtn.addEventListener('click', () => {
+            // UI 초기화 및 시작
+            startBtn.disabled = true;
+            startBtn.textContent = 'RUNNING BENCHMARK...';
+            progContainer.style.display = 'block';
+            piErrorEl.textContent = '';
+            
+            const workers = [];
+            const workerData = new Array(logicalCores).fill(null).map(() => ({ iters: 0, sum: 0 }));
+            let completedWorkers = 0;
+            const startWallTime = Date.now();
+
+            // UI 실시간 업데이트 루프 (0.05초 주사율)
+            const uiInterval = setInterval(() => {
+                const now = Date.now();
+                const elapsed = (now - startWallTime) / 1000;
+                let currentIters = 0;
+                let currentSum = 0;
+                
+                for(let data of workerData) {
+                    currentIters += data.iters;
+                    currentSum += data.sum;
+                }
+
+                if (elapsed <= DURATION) {
+                    timeElapsedEl.textContent = elapsed.toFixed(1) + 's';
+                    progBar.style.width = (elapsed / DURATION * 100) + '%';
+                }
+                
+                totalItersEl.textContent = currentIters.toLocaleString();
+                const piEstimate = currentSum * 4;
+                if(piEstimate !== 0) {
+                    piValueEl.textContent = piEstimate.toFixed(11);
+                }
+            }, 50);
+
+            // Web Worker(코어) 병렬 생성 및 작업 할당
+            for (let i = 0; i < logicalCores; i++) {
+                const worker = new Worker(workerUrl);
+                workers.push(worker);
+                
+                worker.onmessage = (e) => {
+                    workerData[i] = { iters: e.data.iters, sum: e.data.sum };
+                    if (e.data.type === 'done') {
+                        completedWorkers++;
+                        if (completedWorkers === logicalCores) {
+                            clearInterval(uiInterval);
+                            finishBenchmark(workerData, startWallTime);
+                        }
+                    }
+                };
+                
+                worker.postMessage({
+                    processId: i,
+                    totalProcesses: logicalCores,
+                    duration: DURATION
+                });
+            }
+        });
+
+        function finishBenchmark(workerData, startWallTime) {
+            const actualDuration = (Date.now() - startWallTime) / 1000;
+            let finalIters = 0;
+            let finalSum = 0;
+            for(let data of workerData) {
+                finalIters += data.iters;
+                finalSum += data.sum;
+            }
+            
+            const finalPi = finalSum * 4;
+            const error = Math.abs(Math.PI - finalPi);
+            const ops = Math.floor(finalIters / actualDuration);
+
+            timeElapsedEl.textContent = actualDuration.toFixed(2) + 's';
+            totalItersEl.textContent = finalIters.toLocaleString();
+            piValueEl.textContent = finalPi.toFixed(15);
+            piErrorEl.textContent = 'Error Range: ' + error.toExponential(10);
+            
+            startBtn.textContent = 'SCORE: ' + ops.toLocaleString() + ' OPS';
+            startBtn.style.background = 'linear-gradient(90deg, #f59e0b, #d97706)';
+            startBtn.style.boxShadow = '0 10px 20px rgba(245, 158, 11, 0.4)';
+        }
+    </script>
+</body>
+</html>
